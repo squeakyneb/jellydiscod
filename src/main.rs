@@ -1,4 +1,5 @@
 use std::net::UdpSocket;
+use std::time::Duration;
 
 use clap::Parser;
 
@@ -26,6 +27,32 @@ pub fn get_local_ip() -> Result<String, std::io::Error> {
 #[derive(Parser, Debug)]
 #[command(version)]
 struct Args {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Parser, Debug)]
+enum Commands {
+    /// Run the discovery daemon
+    Daemon(DaemonArgs),
+
+    /// Query for Jellyfin servers
+    Query(QueryArgs),
+}
+
+#[derive(Parser, Debug)]
+struct QueryArgs {
+    /// Timeout in seconds to listen for replies
+    #[arg(long, default_value_t = 3)]
+    timeout: u64,
+
+    /// Address to broadcast from
+    #[arg(long, default_value = "0.0.0.0")]
+    bind: String,
+}
+
+#[derive(Parser, Debug)]
+struct DaemonArgs {
     /// Address to listen on/bind to
     #[arg(long, default_value = "0.0.0.0")]
     bind: String,
@@ -82,6 +109,13 @@ fn run_service(socket: UdpSocket, reply: String) -> std::io::Result<()> {
 fn main() -> std::io::Result<()> {
     let args = Args::parse();
 
+    match args.command {
+        Commands::Daemon(daemon_args) => run_daemon(daemon_args),
+        Commands::Query(query_args) => run_query(query_args),
+    }
+}
+
+fn run_daemon(args: DaemonArgs) -> std::io::Result<()> {
     let jelly_addr = if let Some(addr) = args.addr {
         addr
     } else {
@@ -107,5 +141,36 @@ fn main() -> std::io::Result<()> {
     println!("Binding to {}", bind_addr);
     println!("Announcement will be: {}", reply_precanned);
     UdpSocket::bind(bind_addr).and_then(|s| run_service(s, reply_precanned))?;
+    Ok(())
+}
+
+fn run_query(args: QueryArgs) -> std::io::Result<()> {
+    let bind_addr = format! {"{}:{}", args.bind, 0};
+    let socket = UdpSocket::bind(bind_addr)?;
+    socket.set_broadcast(true)?;
+    socket.set_read_timeout(Some(Duration::from_secs(args.timeout)))?;
+
+    let query_msg = "who is JellyfinServer?";
+    println!("Broadcasting query: {}", query_msg);
+    socket.send_to(query_msg.as_bytes(), "255.255.255.255:7359")?;
+
+    let mut buf = [0; 1024];
+    loop {
+        match socket.recv_from(&mut buf) {
+            Ok((n, addr)) => match str::from_utf8(&buf[..n]) {
+                Ok(msg) => println!("Reply from {}: {}", addr, msg),
+                Err(e) => eprintln!("Failed to decode reply from {}: {}", addr, e),
+            },
+            Err(e)
+                if e.kind() == std::io::ErrorKind::WouldBlock
+                    || e.kind() == std::io::ErrorKind::TimedOut =>
+            {
+                // Timeout reached
+                println!("Query timeout");
+                break;
+            }
+            Err(e) => return Err(e),
+        }
+    }
     Ok(())
 }
