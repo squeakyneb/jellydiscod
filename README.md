@@ -45,58 +45,30 @@ flowchart LR
 
 ## Usage
 
-```
-      --bind <BIND>
-          Address to listen on/bind to
+Run `jellydiscod --help` to see subcommands. Run `jellydiscod <COMMAND> --help` to see detailed options for each subcommand.
 
-          [default: 0.0.0.0]
+### Daemon mode
 
-      --port <PORT>
-          Port to listen on
+`jellydiscod daemon`
 
-          Don't touch this, probably, since this is where clients will announce to. Provided for debug purposes only.
-
-          [default: 7359]
-
-      --name <NAME>
-          Display name to show in autodiscovery
-
-          This is essentially cosmetic and doesn't need to match your Jellyfin server. This will be visible in the Jellyfin client.
-
-          [default: "Jelly Disco"]
-
-      --id <ID>
-          Server ID to return
-
-          I don't know what this does, to be honest. Doesn't seem to need to match, so a "valid" (whatever that means) default is provided.
-
-          [default: 12345678123456781234567812345678]
-
-      --endpoint <ENDPOINT>
-          Endpoint Address to return
-
-          I don't know what this does. It's null on my Jellyfin.
-
-      --addr <ADDR>
-          URL of the server to announce
-
-          If not provided, jellydiscod will guess an appropriate local IP to use for "this" server, based on what interface routes internet-wards.
-
-  -h, --help
-          Print help (see a summary with '-h')
-
-  -V, --version
-          Print version
-```
+Daemon mode announces itself to clients as a Jellyfin server.
 
 Calling the tool with no arguments will probably be enough to announce something usable if running on the same host that presents Jellyfin (i.e. in a reverse proxy scenario). Otherwise, you'll probably need to specify `--addr` with the URL of your Jellyfin server, as would be used in a web browser. Use `--bind` if you need to announce to a specific network only.
 
+### Query mode
+
+`jellydiscod query`
+
+Query mode is a simple Jellyfin discovery client for debugging/testing jellydiscod. It broadcasts to discover Jellyfin servers (or jellydiscod daemons) and prints the returns.
+
 ## Protocol
 
-Based on Jellyfin 10.11.6 source, since the 
+Based on Jellyfin 10.11.6 source. The protocol doesn't seem to be specifically documented anywhere.
 
 Clients UDP broadcast on port 7359 the UTF8 string `who is JellyfinServer?`, or actually any string satisfying `text.Contains("who is JellyfinServer?", StringComparison.OrdinalIgnoreCase)`.
 
 Response is like:
 
 `{"Address":"http://192.168.321.789:8096","Id":"abcdefabcdef123123123abcdefabcde","Name":"My Jellyfin Server","EndpointAddress":null}`
+
+"Address" is the URL of the Jellyfin server. "Name" is the string that will be displayed to users. The other fields I have not determined the function of, but jellydiscod serves appropriate defaults that seem to work.
