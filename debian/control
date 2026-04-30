@@ -1,0 +1,6 @@
+Package: jellydiscod
+Version: @VERSION@
+Architecture: @ARCHITECTURE@
+Maintainer: squeakyneb
+Description: Jellyfin Discovery Daemon
+ A daemon for discovering Jellyfin servers

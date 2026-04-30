@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+# Stop the service if it's running
+systemctl stop jellydiscod || true

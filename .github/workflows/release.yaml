@@ -65,11 +65,9 @@ jobs:
           mkdir -p deb/etc/systemd/system
           mkdir -p deb/DEBIAN
 
-          # Copy binary
+          # Copy binary and service file
           cp target/${{ matrix.target }}/release/jellydiscod deb/opt/jellydiscod/
           chmod 755 deb/opt/jellydiscod/jellydiscod
-
-          # Copy service file
           cp jellydiscod.service deb/etc/systemd/system/
           chmod 644 deb/etc/systemd/system/jellydiscod.service
 
@@ -77,37 +75,14 @@ jobs:
           VERSION="${{ github.ref_name }}"
           VERSION="${VERSION#v}"
 
-          # Create control file
-          cat > deb/DEBIAN/control << EOF
-          Package: jellydiscod
-          Version: $VERSION
-          Architecture: ${{ matrix.deb_arch }}
-          Maintainer: squeakyneb
-          Description: Jellyfin Discovery Daemon
-           A daemon for discovering Jellyfin servers
-          EOF
+          # Copy debian packaging files and substitute variables
+          cp debian/control deb/DEBIAN/control
+          sed -i "s/@VERSION@/$VERSION/g" deb/DEBIAN/control
+          sed -i "s/@ARCHITECTURE@/${{ matrix.deb_arch }}/g" deb/DEBIAN/control
 
-          # Create postinst script to create user/group
-          cat > deb/DEBIAN/postinst << 'EOF'
-          #!/bin/bash
-          set -e
-
-          # Create jellydiscod user and group if they don't exist
-          if ! getent group jellydiscod > /dev/null; then
-            groupadd -r jellydiscod
-          fi
-
-          if ! getent passwd jellydiscod > /dev/null; then
-            useradd -r -g jellydiscod -d /var/lib/jellydiscod -s /usr/sbin/nologin jellydiscod
-          fi
-
-          # Set permissions
-          chown -R jellydiscod:jellydiscod /opt/jellydiscod
-
-          # Reload systemd and enable the service
-          systemctl daemon-reload || true
-          EOF
-          chmod 755 deb/DEBIAN/postinst
+          cp debian/postinst deb/DEBIAN/postinst && chmod 755 deb/DEBIAN/postinst
+          cp debian/prerm deb/DEBIAN/prerm && chmod 755 deb/DEBIAN/prerm
+          cp debian/postrm deb/DEBIAN/postrm && chmod 755 deb/DEBIAN/postrm
 
           # Build deb package
           dpkg-deb --build deb jellydiscod-${VERSION}-${{ matrix.deb_arch }}.deb
