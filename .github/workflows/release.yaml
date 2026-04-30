@@ -19,6 +19,11 @@ jobs:
           - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
             artifact: jellydiscod
+            deb_arch: amd64
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-latest
+            artifact: jellydiscod
+            deb_arch: arm64
           - target: x86_64-pc-windows-msvc
             os: windows-latest
             artifact: jellydiscod.exe
@@ -32,8 +37,13 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Install musl tools (Linux only)
-        if: matrix.target == 'x86_64-unknown-linux-musl'
-        run: sudo apt-get install -y musl-tools
+        if: startsWith(matrix.target, 'x86_64-unknown-linux-musl') || startsWith(matrix.target, 'aarch64-unknown-linux-musl')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+          if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-musl" ]]; then
+            sudo apt-get install -y gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu
+          fi
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -43,11 +53,16 @@ jobs:
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Rename artifact (Linux)
-        if: matrix.target == 'x86_64-unknown-linux-musl'
-        run: cp target/${{ matrix.target }}/release/jellydiscod jellydiscod-linux-x86_64
+        if: startsWith(matrix.target, 'x86_64-unknown-linux-musl') || startsWith(matrix.target, 'aarch64-unknown-linux-musl')
+        run: |
+          if [[ "${{ matrix.target }}" == "x86_64-unknown-linux-musl" ]]; then
+            cp target/${{ matrix.target }}/release/jellydiscod jellydiscod-linux-x86_64
+          elif [[ "${{ matrix.target }}" == "aarch64-unknown-linux-musl" ]]; then
+            cp target/${{ matrix.target }}/release/jellydiscod jellydiscod-linux-arm64
+          fi
 
       - name: Create deb package (Linux)
-        if: matrix.target == 'x86_64-unknown-linux-musl'
+        if: startsWith(matrix.target, 'x86_64-unknown-linux-musl') || startsWith(matrix.target, 'aarch64-unknown-linux-musl')
         run: |
           # Create debian package structure
           mkdir -p deb/opt/jellydiscod
@@ -70,7 +85,7 @@ jobs:
           cat > deb/DEBIAN/control << EOF
           Package: jellydiscod
           Version: $VERSION
-          Architecture: amd64
+          Architecture: ${{ matrix.deb_arch }}
           Maintainer: squeakyneb
           Description: Jellyfin Discovery Daemon
            A daemon for discovering Jellyfin servers
@@ -99,7 +114,7 @@ jobs:
           chmod 755 deb/DEBIAN/postinst
 
           # Build deb package
-          dpkg-deb --build deb jellydiscod-${VERSION}-amd64.deb
+          dpkg-deb --build deb jellydiscod-${VERSION}-${{ matrix.deb_arch }}.deb
           rm -rf deb
 
       - name: Rename artifact (Windows)
@@ -111,7 +126,7 @@ jobs:
         with:
           name: jellydiscod-${{ matrix.target }}
           path: |
-            jellydiscod-linux-x86_64
+            jellydiscod-linux-*
             jellydiscod-*.deb
             jellydiscod-windows-x86_64.exe
           if-no-files-found: ignore
@@ -133,7 +148,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            jellydiscod-linux-x86_64
+            jellydiscod-linux-*
             jellydiscod-*.deb
             jellydiscod-windows-x86_64.exe
           generate_release_notes: true

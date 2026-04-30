@@ -1,0 +1,4 @@
+[build]
+# Use the correct linker for ARM64 cross-compilation
+[target.aarch64-unknown-linux-musl]
+linker = "aarch64-linux-gnu-gcc"
