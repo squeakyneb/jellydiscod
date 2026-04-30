@@ -1,0 +1,10 @@
+[Unit]
+Description=Jellyfin Discovery Daemon
+
+[Service]
+ExecStart=/opt/jellydiscod/jellydiscod daemon
+User=jellydiscod
+Group=jellydiscod
+
+[Install]
+WantedBy=multi-user.target
