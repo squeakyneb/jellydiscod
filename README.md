@@ -43,7 +43,21 @@ flowchart LR
     Jellydiscod <-. VPN connection .-> VPN
 ```
 
-## Usage
+## Installation as a service
+
+DEB packages provided via GitHub releases will install a `jellydiscod.service` systemd service which runs as a `jellydiscod` user/group. `systemctl enable --now jellydiscod` will get it going.
+
+If you require non-default configuration, refer to the CLI usage for options. Edit required options into the service with `systemctl edit jellydiscod.service` and as shown below, then restart the service.
+
+```
+[Service]
+ExecStart=
+ExecStart=/opt/jellydiscod/jellydiscod daemon --addr "http://my-jellyfin.foonet:8096"
+```
+
+Operation can be validated with `/opt/jellydiscod/jellydiscod query` or of course with a Jellyfin client app.
+
+## CLI usage
 
 Run `jellydiscod --help` to see subcommands. Run `jellydiscod <COMMAND> --help` to see detailed options for each subcommand.
 
