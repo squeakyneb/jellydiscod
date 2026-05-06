@@ -1,0 +1,10 @@
+# Limited to direct (actionable) notifications only, to limit noise
+
+version: 2
+updates:
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    allow:
+      - dependency-type: "direct"
