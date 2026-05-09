@@ -1,3 +1,3 @@
 FROM scratch
-COPY jellydiscod /jellydiscod
+COPY --chmod=0555 jellydiscod /jellydiscod
 ENTRYPOINT ["/jellydiscod"]
