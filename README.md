@@ -43,7 +43,9 @@ flowchart LR
     Jellydiscod <-. VPN connection .-> VPN
 ```
 
-## Installation as a service
+## Installation
+
+### As a native service
 
 DEB packages provided via GitHub releases will install a `jellydiscod.service` systemd service which runs as a `jellydiscod` user/group. `systemctl enable --now jellydiscod` will get it going.
 
@@ -56,6 +58,12 @@ ExecStart=/opt/jellydiscod/jellydiscod daemon --addr "http://my-jellyfin.foonet:
 ```
 
 Operation can be validated with `/opt/jellydiscod/jellydiscod query` or of course with a Jellyfin client app.
+
+### Docker
+
+`docker run --network host --restart unless-stopped -d ghcr.io/squeakyneb/jellydiscod:latest daemon`
+
+Container takes all the usual CLI usage flags. Host networking mode is needed to receive the discovery broadcast packets (or some equivalent functionality).
 
 ## CLI usage
 
